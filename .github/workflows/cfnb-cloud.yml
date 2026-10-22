@@ -41,15 +41,18 @@ jobs:
         working-directory: cloud
         run: |
           test -f ip.txt || exit 0
+          cp ip.txt /tmp/ip-new.txt
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git reset --hard origin/main
+          cp /tmp/ip-new.txt ip.txt
           git add ip.txt
           if git diff --cached --quiet; then
             echo "ip.txt unchanged, skip commit"
           else
             git commit -m "cloud ip update"
-            git pull --rebase origin main || true
-            git push
+            git push origin HEAD:main
           fi
 
       - name: Upload artifact
