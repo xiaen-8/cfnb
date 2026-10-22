@@ -24,7 +24,7 @@ jobs:
           python-version: '3.12'
 
       - name: Install deps
-        run: pip install requests aiohttp
+        run: pip install requests aiohttp brotli
 
       - name: Run cfnb (one round)
         working-directory: cloud
