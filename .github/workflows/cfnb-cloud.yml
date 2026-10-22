@@ -1,0 +1,62 @@
+name: cfnb-cloud
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: cfnb-cloud
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install deps
+        run: pip install requests aiohttp
+
+      - name: Run cfnb (one round)
+        working-directory: cloud
+        run: python3 main.py
+
+      - name: Show result
+        if: always()
+        working-directory: cloud
+        run: |
+          ls -la
+          test -f ip.txt && wc -l ip.txt && head -20 ip.txt || echo "no ip.txt produced"
+
+      - name: Commit cloud ip list
+        working-directory: cloud
+        run: |
+          test -f ip.txt || exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add ip.txt
+          if git diff --cached --quiet; then
+            echo "ip.txt unchanged, skip commit"
+          else
+            git commit -m "cloud ip update"
+            git pull --rebase origin main || true
+            git push
+          fi
+
+      - name: Upload artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ip-txt
+          path: cloud/ip.txt
+          retention-days: 3
+          if-no-files-found: ignore
